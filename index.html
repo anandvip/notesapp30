@@ -3,85 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Notes App</title>
+    <title>Enhanced Notes Application</title>
     <style>
-        body {
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #F0F0EA;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent: #00CED1;
+            --border: #dddddd;
+            --toast-bg: rgba(0, 206, 209, 0.9);
+            --toast-text: #ffffff;
+            --modal-bg: rgba(0, 0, 0, 0.5);
+            --button-hover: #00A9AD;
+        }
+
+        .dark-theme {
+            --bg-primary: #333333;
+            --bg-secondary: #222222;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #00CED1;
+            --border: #555555;
+            --toast-bg: rgba(0, 206, 209, 0.9);
+            --toast-text: #ffffff;
+            --modal-bg: rgba(255, 255, 255, 0.1);
+            --button-hover: #00A9AD;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
+            height: 100%;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #app {
+            display: flex;
+            height: 100%;
+        }
+
+        #sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
             padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100%;
+            z-index: 1000;
         }
-        h1, h2 {
-            color: #2c3e50;
+
+        #sidebar.collapsed {
+            transform: translateX(-100%);
         }
-        input[type="text"], input[type="email"], textarea {
-            width: 100%;
-            padding: 8px;
+
+        #sidebar-toggle {
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            z-index: 1001;
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            margin-left: 300px;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        #main-content.full-width {
+            margin-left: 0;
+        }
+
+        #header {
+            background-color: var(--accent);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #notes-container {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .note {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .note-title {
+            width: calc(100% - 30px);
+            background-color: transparent;
+            color: var(--text-primary);
+            border: none;
+            font-size: 1.2em;
+            font-weight: bold;
             margin-bottom: 10px;
         }
+
+        .note-content {
+            width: 100%;
+            min-height: 100px;
+            background-color: transparent;
+            color: var(--text-primary);
+            border: 0.5pt dotted;
+            resize: vertical;
+            outline: none;
+        }
+
         button {
-            background-color: #3498db;
-            color: white;
+            background-color: var(--accent);
+            color: var(--bg-primary);
             border: none;
-            padding: 10px 15px;
+            padding: 5px 10px;
             cursor: pointer;
+            border-radius: 3px;
             transition: background-color 0.3s;
         }
+
         button:hover {
-            background-color: #2980b9;
+            background-color: var(--button-hover);
         }
-        .note {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
+
+        #add-note-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+        }
+
+        #add-project-btn {
+            width: 100%;
             padding: 10px;
-            margin-bottom: 10px;
-        }
-        #projectsList, #notesList {
             margin-top: 20px;
         }
-        .hidden {
-            display: none;
+
+        .project-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .project-title {
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px 0;
+            margin-top: 20px;
+        }
+
+        .project-notes {
+            margin-left: 15px;
+        }
+
+        .project-note {
+            padding: 3px 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .project-note:hover {
+            color: var(--accent);
+        }
+
+        #theme-toggle, #author-input {
+            background: none;
+            border: none;
+            color: var(--bg-primary);
+        }
+
+        #author-input {
+            border-bottom: 1px solid var(--bg-primary);
+            padding: 5px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: var(--toast-bg);
+            color: var(--toast-text);
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast input {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+            border: none;
+            border-radius: 3px;
+        }
+
+        .formatting-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .formatting-menu button {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .formatting-menu button:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .delete-btn {
+            background-color: #ff4d4d;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff3333;
+        }
+
+        #version-settings {
+            margin-top: 20px;
+            background-color: var(--bg-secondary);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #version-frequency {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background-color: var(--bg-primary);
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+        }
+
+        .version-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #login-form, #signup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+
+        #login-form input, #signup-form input {
+            padding: 5px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+        }
+
+        #auth-error {
+            color: #ff4d4d;
+            margin-top: 10px;
+        }
+
+        #user-info {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #sync-status {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        #google-signin-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #google-signin-btn img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Comprehensive Notes App</h1>
-    
-    <div id="authSection">
-        <h2>Authentication</h2>
-        <div id="signInButtons">
-            <button id="googleSignIn">Sign in with Google</button>
-            <button id="emailSignIn">Sign in with Email</button>
+    <div id="app">
+        <button id="sidebar-toggle">☰</button>
+        <div id="sidebar">
+            <div id="projects-list"></div>
+            <button id="add-project-btn">Add Project</button>
+            <div id="version-settings">
+                <h3>Version Control</h3>
+                <select id="version-frequency">
+                    <option value="0">No versioning</option>
+                    <option value="5000" selected>Every 5 seconds</option>
+                    <option value="10000">Every 10 seconds</option>
+                    <option value="30000">Every 30 seconds</option>
+                    <option value="60000">Every minute</option>
+                </select>
+            </div>
         </div>
-        <div id="emailSignInForm" class="hidden">
-            <input type="email" id="emailInput" placeholder="Enter your email">
-            <button id="sendEmailLink">Send Sign-In Link</button>
+        <div id="main-content">
+            <div id="header">
+                <span id="word-count">0 words</span>
+                <input type="text" id="author-input" placeholder="Author name">
+                <div id="user-info">
+                    <span id="user-email"></span>
+                    <button id="logout-btn" style="display: none;">Logout</button>
+                </div>
+                <button id="theme-toggle">🌓</button>
+            </div>
+            <div id="auth-container">
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                </form>
+                <form id="signup-form">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                    <button type="submit">Sign Up</button>
+                </form>
+                <button id="google-signin-btn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+                    Sign in with Google
+                </button>
+                <div id="auth-error"></div>
+            </div>
+            <div id="notes-container"></div>
         </div>
-        <button id="signOut" class="hidden">Sign Out</button>
-        <p id="userStatus"></p>
     </div>
-
-    <div id="appContent" class="hidden">
-        <h2>Projects</h2>
-        <input type="text" id="projectName" placeholder="New Project Name">
-        <button id="addProject">Add Project</button>
-        <div id="projectsList"></div>
-
-        <h2>Notes</h2>
-        <select id="projectSelect"></select>
-        <input type="text" id="noteTitle" placeholder="Note Title">
-        <textarea id="noteContent" placeholder="Note Content"></textarea>
-        <button id="addNote">Add Note</button>
-        <div id="notesList"></div>
-    </div>
+    <button id="add-note-btn">+</button>
+    <div id="toast-container"></div>
 
     <script type="module">
+        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDoc, setDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD84fEmaDJC0m3ouTL1Di-v564bUE3RGkM",
             authDomain: "notesapp30.firebaseapp.com",
@@ -91,252 +408,678 @@
             appId: "1:414284620791:web:7a1f957af7e2a45421c4f2"
         };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // DOM Elements
-        const googleSignInBtn = document.getElementById('googleSignIn');
-        const emailSignInBtn = document.getElementById('emailSignIn');
-        const emailSignInForm = document.getElementById('emailSignInForm');
-        const emailInput = document.getElementById('emailInput');
-        const sendEmailLinkBtn = document.getElementById('sendEmailLink');
-        const signOutBtn = document.getElementById('signOut');
-        const userStatus = document.getElementById('userStatus');
-        const appContent = document.getElementById('appContent');
-        const projectNameInput = document.getElementById('projectName');
-        const addProjectBtn = document.getElementById('addProject');
-        const projectsList = document.getElementById('projectsList');
-        const projectSelect = document.getElementById('projectSelect');
-        const noteTitleInput = document.getElementById('noteTitle');
-        const noteContentInput = document.getElementById('noteContent');
-        const addNoteBtn = document.getElementById('addNote');
-        const notesList = document.getElementById('notesList');
-
-        // Authentication State Observer
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userStatus.textContent = `Signed in as ${user.displayName || 'User'} (${user.email})`;
-                document.getElementById('signInButtons').classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
-                appContent.classList.remove('hidden');
-                loadProjects();
-            } else {
-                userStatus.textContent = 'Not signed in';
-                document.getElementById('signInButtons').classList.remove('hidden');
-                signOutBtn.classList.add('hidden');
-                appContent.classList.add('hidden');
+        class EventEmitter {
+            constructor() {
+                this.events = {};
             }
-        });
 
-        // Google Sign-In
-        googleSignInBtn.addEventListener('click', () => {
-            const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider).catch(console.error);
-        });
-
-        // Email Link Authentication
-        emailSignInBtn.addEventListener('click', () => {
-            emailSignInForm.classList.toggle('hidden');
-        });
-
-        sendEmailLinkBtn.addEventListener('click', () => {
-            const email = emailInput.value;
-            const actionCodeSettings = {
-                url: window.location.href,
-                handleCodeInApp: true
-            };
-
-            sendSignInLinkToEmail(auth, email, actionCodeSettings)
-                .then(() => {
-                    window.localStorage.setItem('emailForSignIn', email);
-                    alert('Sign-in link sent to your email!');
-                })
-                .catch(console.error);
-        });
-
-        if (isSignInWithEmailLink(auth, window.location.href)) {
-            let email = window.localStorage.getItem('emailForSignIn');
-            if (!email) {
-                email = window.prompt('Please provide your email for confirmation');
-            }
-            signInWithEmailLink(auth, email, window.location.href)
-                .then(() => {
-                    window.localStorage.removeItem('emailForSignIn');
-                })
-                .catch(console.error);
-        }
-
-        // Sign Out
-        signOutBtn.addEventListener('click', () => {
-            signOut(auth).catch(console.error);
-        });
-
-        // Add Project
-        addProjectBtn.addEventListener('click', async () => {
-            const user = auth.currentUser;
-            if (user && projectNameInput.value) {
-                try {
-                    await addDoc(collection(db, `users/${user.uid}/projects`), {
-                        name: projectNameInput.value,
-                        timestamp: serverTimestamp()
-                    });
-                    projectNameInput.value = '';
-                    loadProjects();
-                } catch (error) {
-                    console.error("Error adding project:", error);
+            on(eventName, callback) {
+                if (!this.events[eventName]) {
+                    this.events[eventName] = [];
                 }
+                this.events[eventName].push(callback);
             }
-        });
 
-        // Load Projects
-        async function loadProjects() {
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    const querySnapshot = await getDocs(query(collection(db, `users/${user.uid}/projects`), orderBy('timestamp', 'desc')));
-                    projectsList.innerHTML = '';
-                    projectSelect.innerHTML = '';
-                    querySnapshot.forEach((doc) => {
-                        const project = doc.data();
-                        const projectElement = document.createElement('div');
-                        projectElement.innerHTML = `
-                            <h3>${project.name}</h3>
-                            <button onclick="editProject('${doc.id}')">Edit</button>
-                            <button onclick="deleteProject('${doc.id}')">Delete</button>
-                        `;
-                        projectsList.appendChild(projectElement);
-
-                        const option = document.createElement('option');
-                        option.value = doc.id;
-                        option.textContent = project.name;
-                        projectSelect.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error("Error loading projects:", error);
+            emit(eventName, data) {
+                const event = this.events[eventName];
+                if (event) {
+                    event.forEach(callback => callback(data));
                 }
             }
         }
 
-        // Add Note
-        addNoteBtn.addEventListener('click', async () => {
-            const user = auth.currentUser;
-            const projectId = projectSelect.value;
-            if (user && projectId && noteTitleInput.value && noteContentInput.value) {
-                try {
-                    await addDoc(collection(db, `users/${user.uid}/projects/${projectId}/notes`), {
-                        title: noteTitleInput.value,
-                        content: noteContentInput.value,
-                        timestamp: serverTimestamp()
-                    });
-                    noteTitleInput.value = '';
-                    noteContentInput.value = '';
-                    loadNotes(projectId);
-                } catch (error) {
-                    console.error("Error adding note:", error);
-                }
+        class NotesApp {
+            constructor() {
+                this.db = null;
+                this.notes = [];
+                this.projects = [];
+                this.currentProject = null;
+                this.versioningInterval = 5000; // Default to 5 seconds
+                this.eventEmitter = new EventEmitter();
+                this.sidebarCollapsed = false;
+                this.currentUser = null;
+                this.syncQueue = [];
+                this.isSyncing = false;
+
+                this.initElements();
+                this.initIndexedDB();
+                this.initFirebase();
+                this.addEventListeners();
+                this.setupObservers();
             }
-        });
 
-        // Load Notes
-        async function loadNotes(projectId) {
-            const user = auth.currentUser;
-            if (user && projectId) {
-                try {
-                    const querySnapshot = await getDocs(query(collection(db, `users/${user.uid}/projects/${projectId}/notes`), orderBy('timestamp', 'desc')));
-                    notesList.innerHTML = '';
-                    querySnapshot.forEach((doc) => {
-                        const note = doc.data();
-                        const noteElement = document.createElement('div');
-                        noteElement.className = 'note';
-                        noteElement.innerHTML = `
-                            <h3>${note.title}</h3>
-                            <p>${note.content}</p>
-                            <button onclick="editNote('${projectId}', '${doc.id}')">Edit</button>
-                            <button onclick="deleteNote('${projectId}', '${doc.id}')">Delete</button>
-                        `;
-                        notesList.appendChild(noteElement);
-                    });
-                } catch (error) {
-                    console.error("Error loading notes:", error);
-                }
+            initElements() {
+                this.sidebar = document.getElementById('sidebar');
+                this.sidebarToggle = document.getElementById('sidebar-toggle');
+                this.mainContent = document.getElementById('main-content');
+                this.addNoteBtn = document.getElementById('add-note-btn');
+                this.notesContainer = document.getElementById('notes-container');
+                this.wordCountElement = document.getElementById('word-count');
+                this.authorInput = document.getElementById('author-input');
+                this.projectsList = document.getElementById('projects-list');
+                this.addProjectBtn = document.getElementById('add-project-btn');
+                this.themeToggle = document.getElementById('theme-toggle');
+                this.toastContainer = document.getElementById('toast-container');
+                this.versionFrequency = document.getElementById('version-frequency');
+                this.loginForm = document.getElementById('login-form');
+               this.signupForm = document.getElementById('signup-form');
+                this.authError = document.getElementById('auth-error');
+                this.userInfo = document.getElementById('user-info');
+                this.userEmail = document.getElementById('user-email');
+                this.logoutBtn = document.getElementById('logout-btn');
+                this.authContainer = document.getElementById('auth-container');
+                this.googleSignInBtn = document.getElementById('google-signin-btn');
             }
-        }
 
-        projectSelect.addEventListener('change', (e) => loadNotes(e.target.value));
+            initIndexedDB() {
+                const dbName = 'NotesAppDB';
+                const dbVersion = 1;
+                const request = indexedDB.open(dbName, dbVersion);
 
-        // Edit Project
-        window.editProject = async (projectId) => {
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    const docRef = doc(db, `users/${user.uid}/projects/${projectId}`);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        const project = docSnap.data();
-                        const newName = prompt("Enter new project name:", project.name);
-                        if (newName) {
-                            await updateDoc(docRef, { name: newName });
-                            loadProjects();
-                        }
+                request.onerror = (event) => this.showToast("IndexedDB error: " + event.target.error);
+
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.loadDataFromDB();
+                };
+
+                request.onupgradeneeded = (event) => {
+                    this.db = event.target.result;
+                    if (!this.db.objectStoreNames.contains('notes')) {
+                        this.db.createObjectStore('notes', { keyPath: 'id' });
                     }
-                } catch (error) {
-                    console.error("Error editing project:", error);
-                }
+                    if (!this.db.objectStoreNames.contains('projects')) {
+                        this.db.createObjectStore('projects', { keyPath: 'id' });
+                    }
+                };
             }
-        };
 
-        // Delete Project
-        window.deleteProject = async (projectId) => {
-            const user = auth.currentUser;
-            if (user && confirm('Are you sure you want to delete this project and all its notes?')) {
-                try {
-                    await deleteDoc(doc(db, `users/${user.uid}/projects/${projectId}`));
-                    loadProjects();
-                } catch (error) {
-                    console.error("Error deleting project:", error);
-                }
+            initFirebase() {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        this.currentUser = user;
+                        this.userEmail.textContent = user.email;
+                        this.logoutBtn.style.display = 'block';
+                        this.authContainer.style.display = 'none';
+                        this.loadDataFromFirestore();
+                    } else {
+                        this.currentUser = null;
+                        this.userEmail.textContent = '';
+                        this.logoutBtn.style.display = 'none';
+                        this.authContainer.style.display = 'block';
+                    }
+                });
             }
-        };
 
-        // Edit Note
-        window.editNote = async (projectId, noteId) => {
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    const docRef = doc(db, `users/${user.uid}/projects/${projectId}/notes/${noteId}`);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        const note = docSnap.data();
-                        const newTitle = prompt("Enter new note title:", note.title);
-                        const newContent = prompt("Enter new note content:", note.content);
-                        if (newTitle && newContent) {
-                            await updateDoc(docRef, { 
-                                title: newTitle, 
-                                content: newContent,
-                                timestamp: serverTimestamp()
+            addEventListeners() {
+                this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+                this.addNoteBtn.addEventListener('click', () => this.createNote());
+                this.addProjectBtn.addEventListener('click', () => this.showInputToast("Enter project name:", (name) => this.addProject(name)));
+                this.themeToggle.addEventListener('click', () => this.toggleTheme());
+                this.versionFrequency.addEventListener('change', (e) => {
+                    this.versioningInterval = parseInt(e.target.value);
+                    this.showToast(`Version control interval set to ${this.versioningInterval / 1000} seconds`);
+                });
+
+                this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+                this.signupForm.addEventListener('submit', (e) => this.handleSignup(e));
+                this.logoutBtn.addEventListener('click', () => this.handleLogout());
+                this.googleSignInBtn.addEventListener('click', () => this.handleGoogleSignIn());
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    const savedTheme = localStorage.getItem('theme');
+                    if (savedTheme === 'dark') {
+                        document.body.classList.add('dark-theme');
+                    }
+
+                    const savedAuthor = localStorage.getItem('author');
+                    if (savedAuthor) {
+                        this.authorInput.value = savedAuthor;
+                    }
+
+                    this.authorInput.addEventListener('change', (e) => {
+                        localStorage.setItem('author', e.target.value);
+                    });
+                });
+            }
+
+            setupObservers() {
+                this.eventEmitter.on('noteUpdated', () => this.updateWordCount());
+                this.eventEmitter.on('noteUpdated', () => this.renderProjects());
+                this.eventEmitter.on('noteAdded', () => this.renderNotes());
+                this.eventEmitter.on('noteAdded', () => this.renderProjects());
+                this.eventEmitter.on('noteDeleted', () => this.renderNotes());
+                this.eventEmitter.on('noteDeleted', () => this.renderProjects());
+                this.eventEmitter.on('projectAdded', () => this.renderProjects());
+                this.eventEmitter.on('projectDeleted', () => this.renderProjects());
+                this.eventEmitter.on('projectDeleted', () => this.renderNotes());
+            }
+
+            toggleSidebar() {
+                this.sidebarCollapsed = !this.sidebarCollapsed;
+                this.sidebar.classList.toggle('collapsed', this.sidebarCollapsed);
+                this.mainContent.classList.toggle('full-width', this.sidebarCollapsed);
+                this.sidebarToggle.textContent = this.sidebarCollapsed ? '☰' : '⌘';
+            }
+
+            loadDataFromDB() {
+                const notesStore = this.db.transaction('notes', 'readonly').objectStore('notes');
+                notesStore.getAll().onsuccess = (event) => {
+                    this.notes = event.target.result;
+                    this.notes.forEach(note => {
+                        if (!Array.isArray(note.versions)) {
+                            note.versions = [{
+                                content: note.content,
+                                date: note.date
+                            }];
+                            this.saveToIndexedDB('notes', note);
+                        }
+                    });
+                    this.eventEmitter.emit('noteUpdated');
+                };
+                const projectsStore = this.db.transaction('projects', 'readonly').objectStore('projects');
+                projectsStore.getAll().onsuccess = (event) => {
+                    this.projects = event.target.result;
+                    this.eventEmitter.emit('projectAdded');
+                };
+            }
+
+            loadDataFromFirestore() {
+                if (!this.currentUser) return;
+
+                const userNotesRef = collection(db, `users/${this.currentUser.uid}/notes`);
+                getDocs(userNotesRef).then((querySnapshot) => {
+                    this.notes = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                    this.eventEmitter.emit('noteUpdated');
+                });
+
+                const userProjectsRef = collection(db, `users/${this.currentUser.uid}/projects`);
+                getDocs(userProjectsRef).then((querySnapshot) => {
+                    this.projects = querySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                    this.eventEmitter.emit('projectAdded');
+                });
+            }
+
+            saveToIndexedDB(storeName, data) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put(data);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            deleteFromIndexedDB(storeName, id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.delete(id);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            createNote(title = 'New Note', content = '', projectId = this.currentProject) {
+                const note = {
+                    id: Date.now(),
+                    title: title,
+                    content: content,
+                    author: this.authorInput.value || 'Anonymous',
+                    projectId: projectId,
+                    date: new Date().toLocaleString(),
+                    versions: [{
+                        content: content,
+                        date: new Date().toLocaleString()
+                    }]
+                };
+                this.notes.push(note);
+                this.saveToIndexedDB('notes', note)
+                    .then(() => {
+                        this.eventEmitter.emit('noteAdded', note);
+                        this.showToast("New note added");
+                        this.syncToFirestore(note);
+                    })
+                    .catch(error => this.showToast("Error adding note: " + error));
+            }
+
+            updateNote(id, field, value) {
+                const note = this.notes.find(n => n.id === id);
+                if (note) {
+                    const oldContent = note.content;
+                    note[field] = value;
+                    note.author = this.authorInput.value || note.author;
+                    note.date = new Date().toLocaleString();
+
+                    if (field === 'content' && value !== oldContent && this.versioningInterval > 0) {
+                        const lastVersion = note.versions[note.versions.length - 1];
+                        const timeSinceLastVersion = new Date() - new Date(lastVersion.date);
+                        
+                        if (timeSinceLastVersion >= this.versioningInterval) {
+                            note.versions.push({
+                                content: value,
+                                date: new Date().toLocaleString()
                             });
-                            loadNotes(projectId);
+                        } else {
+                            lastVersion.content = value;
+                            lastVersion.date = new Date().toLocaleString();
                         }
                     }
-                } catch (error) {
-                    console.error("Error editing note:", error);
-                }
-            }
-        };
 
-        // Delete Note
-        window.deleteNote = async (projectId, noteId) => {
-            const user = auth.currentUser;
-            if (user && confirm('Are you sure you want to delete this note?')) {
-                try {
-                    await deleteDoc(doc(db, `users/${user.uid}/projects/${projectId}/notes/${noteId}`));
-                    loadNotes(projectId);
-                } catch (error) {
-                    console.error("Error deleting note:", error);
+                    this.saveToIndexedDB('notes', note)
+                        .then(() => {
+                            this.eventEmitter.emit('noteUpdated', note);
+                            this.syncToFirestore(note);
+                        })
+                        .catch(error => this.showToast("Error updating note: " + error));
                 }
             }
-        };
+
+            deleteNote(id) {
+                this.deleteFromIndexedDB('notes', id)
+                    .then(() => {
+                        this.notes = this.notes.filter(note => note.id !== id);
+                        this.eventEmitter.emit('noteDeleted', id);
+                        this.showToast("Note deleted");
+                        this.deleteFromFirestore('notes', id);
+                    })
+                    .catch(error => this.showToast("Error deleting note: " + error));
+            }
+
+            renderNotes() {
+                this.notesContainer.innerHTML = '';
+                const filteredNotes = this.currentProject ? this.notes.filter(note => note.projectId === this.currentProject) : this.notes;
+                filteredNotes.forEach(note => {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'note';
+                    noteElement.dataset.id = note.id;
+                    noteElement.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <input type="text" class="note-title" value="${note.title}">
+                            <button class="version-history-btn">History</button>
+                            <button class="delete-btn">
+                                <svg viewBox="0 0 448 512" width="10" title="trash-alt">
+                                    <path d="M32 464a48 48 0 0 0 48 48h288a48 48 0 0 0 48-48V128H32zm272-256a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zM432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="formatting-menu">
+                            <button data-format="bold">B</button>
+                            <button data-format="italic">I</button>
+                            <button data-format="underline">U</button>
+                            <button data-format="strikethrough">S</button>
+                            <button data-format="h1">H1</button>
+                            <button data-format="h2">H2</button>
+                            <button data-format="h3">H3</button>
+                            <button data-format="h4">H4</button>
+                            <button data-format="paragraph">P</button>
+                            <button data-format="unordered-list">UL</button>
+                            <button data-format="ordered-list">OL</button>
+                        </div>
+                        <div class="note-content" contenteditable="true">${note.content}</div>
+                        <div>Author: ${note.author}</div>
+                        <div>Date: ${note.date}</div>
+                        <div>Versions: ${note.versions.length}</div>
+                    `;
+                    noteElement.querySelector('.note-title').addEventListener('input', (e) => this.updateNote(note.id, 'title', e.target.value));
+                    
+                    const contentElement = noteElement.querySelector('.note-content');
+                    let updateTimeout;
+                    contentElement.addEventListener('input', () => {
+                        clearTimeout(updateTimeout);
+                        updateTimeout = setTimeout(() => {
+                            this.updateNote(note.id, 'content', contentElement.innerHTML);
+                        }, this.versioningInterval);
+                    });
+                    
+                    noteElement.querySelectorAll('.formatting-menu button').forEach(button => {
+                        button.addEventListener('click', () => this.applyFormatting(note.id, button.dataset.format));
+                    });
+                    
+                    noteElement.querySelector('.delete-btn').addEventListener('click', () => this.deleteNote(note.id));
+                    noteElement.querySelector('.version-history-btn').addEventListener('click', () => this.showVersionHistory(note.id));
+                    
+                    this.notesContainer.appendChild(noteElement);
+                });
+                this.updateWordCount();
+            }
+
+            applyFormatting(noteId, format) {
+                const noteContent = document.querySelector(`.note[data-id="${noteId}"] .note-content`);
+                const selection = window.getSelection();
+                const range = selection.getRangeAt(0);
+                
+                if (range.toString().length > 0) {
+                    switch(format) {
+                        case 'bold':
+                            document.execCommand('bold', false, null);
+                            break;
+                        case 'italic':
+                            document.execCommand('italic', false, null);
+                            break;
+                        case 'underline':
+                            document.execCommand('underline', false, null);
+                            break;
+                        case 'strikethrough':
+                            document.execCommand('strikeThrough', false, null);
+                            break;
+                        case 'h1':
+                        case 'h2':
+                        case 'h3':
+                        case 'h4':
+                        case 'paragraph':
+                            document.execCommand('formatBlock', false, `<${format}>`);
+                            break;
+                        case 'unordered-list':
+                            document.execCommand('insertUnorderedList', false, null);
+                            break;
+                        case 'ordered-list':
+                            document.execCommand('insertOrderedList', false, null);
+                            break;
+                    }
+                    this.updateNote(noteId, 'content', noteContent.innerHTML);
+                }
+            }
+
+            updateWordCount() {
+                const wordCount = this.notes.reduce((count, note) => {
+                    return count + note.content.replace(/<[^>]*>/g, '').trim().split(/\s+/).filter(word => word.length > 0).length;
+                }, 0);
+                this.wordCountElement.textContent = `${wordCount} word${wordCount !== 1 ? 's' : ''}`;
+            }
+
+            addProject(projectName) {
+                if (projectName) {
+                    const project = {
+                        id: Date.now(),
+                        name: projectName
+                    };
+                    this.projects.push(project);
+                    this.saveToIndexedDB('projects', project)
+                        .then(() => {
+                            this.eventEmitter.emit('projectAdded', project);
+                            this.showToast("New project added: " + projectName);
+                            this.syncToFirestore(project, 'projects');
+                        })
+                        .catch(error => this.showToast("Error adding project: " + error));
+                }
+            }
+
+            renderProjects() {
+                this.projectsList.innerHTML = '';
+                this.projects.forEach(project => {
+                    const projectElement = document.createElement('div');
+                    projectElement.className = 'project-item';
+                    projectElement.innerHTML = `
+                        <div class="project-title">${project.name}</div>
+                        <button class="delete-btn">
+                            <svg viewBox="0 0 448 512" width="10" title="trash-alt">
+                                <path d="M32 464a48 48 0 0 0 48 48h288a48 48 0 0 0 48-48V128H32zm272-256a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zm-96 0a16 16 0 0 1 32 0v224a16 16 0 0 1-32 0zM432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16z"></path>
+                            </svg>
+                        </button>
+                    `;
+                    projectElement.querySelector('.project-title').addEventListener('click', () => {
+                        this.currentProject = project.id;
+                        this.renderNotes();
+                        this.showToast("Switched to project: " + project.name);
+                    });
+
+                    projectElement.querySelector('.delete-btn').addEventListener('click', () => this.deleteProject(project.id));
+
+                    const projectNotes = document.createElement('div');
+                    projectNotes.className = 'project-notes';
+                    this.notes.filter(note => note.projectId === project.id).forEach(note => {
+                        const noteElement = document.createElement('div');
+                        noteElement.className = 'project-note';
+                        noteElement.textContent = note.title;
+                        noteElement.addEventListener('click', () => {
+                            this.currentProject = project.id;
+                            this.renderNotes();
+                            const noteInMain = document.querySelector(`.note[data-id="${note.id}"]`);
+                            if (noteInMain) noteInMain.scrollIntoView({ behavior: 'smooth' });
+                        });
+                        projectNotes.appendChild(noteElement);
+                    });
+
+                    projectElement.appendChild(projectNotes);
+                    this.projectsList.appendChild(projectElement);
+                });
+            }
+
+            deleteProject(id) {
+                this.deleteFromIndexedDB('projects', id)
+                    .then(() => {
+                        this.projects = this.projects.filter(project => project.id !== id);
+                        const notesToDelete = this.notes.filter(note => note.projectId === id);
+                        Promise.all(notesToDelete.map(note => this.deleteFromIndexedDB('notes', note.id)))
+                            .then(() => {
+                                this.notes = this.notes.filter(note => note.projectId !== id);
+                                if (this.currentProject === id) {
+                                    this.currentProject = null;
+                                }
+                                this.eventEmitter.emit('projectDeleted', id);
+                                this.showToast("Project and associated notes deleted");
+                                this.deleteFromFirestore('projects', id);
+                                notesToDelete.forEach(note => this.deleteFromFirestore('notes', note.id));
+                            })
+                            .catch(error => this.showToast("Error deleting project notes: " + error));
+                    })
+                    .catch(error => this.showToast("Error deleting project: " + error));
+            }
+
+            showVersionHistory(noteId) {
+                const note = this.notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                const versionList = note.versions.map((version, index) => `
+                    <div class="version-item">
+                        <span>Version ${index + 1} - ${version.date}</span>
+                        <button onclick="notesApp.previewVersion(${noteId}, ${index})">Preview</button>
+                    </div>
+                `).join('');
+
+                this.showModal(`
+                    <h3>Version History for "${note.title}"</h3>
+                    ${versionList}
+                `);
+            }
+
+            previewVersion(noteId, versionIndex) {
+                const note = this.notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                const versionToPreview = note.versions[versionIndex];
+                this.showModal(`
+                    <h3>Preview of Version ${versionIndex + 1} - ${versionToPreview.date}</h3>
+                    <div>${versionToPreview.content}</div>
+                    <button onclick="notesApp.restoreVersion(${noteId}, ${versionIndex})">Restore This Version</button>
+                `);
+            }
+
+            restoreVersion(noteId, versionIndex) {
+                const note = this.notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                const versionToRestore = note.versions[versionIndex];
+                const newVersion = {
+                    content: note.content,
+                    date: new Date().toLocaleString()
+                };
+                note.versions.push(newVersion);
+                note.content = versionToRestore.content;
+                note.date = new Date().toLocaleString();
+
+                this.saveToIndexedDB('notes', note)
+                    .then(() => {
+                        this.eventEmitter.emit('noteUpdated', note);
+                        this.closeModal();
+                        this.showToast("Version restored");
+                        this.syncToFirestore(note);
+                    })
+                    .catch(error => this.showToast("Error restoring version: " + error));
+            }
+
+            showModal(content) {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        ${content}
+                        <button onclick="notesApp.closeModal()">Close</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            closeModal() {
+                const modal = document.querySelector('.modal');
+                if (modal) {
+                    modal.remove();
+                }
+            }
+
+            toggleTheme() {
+                document.body.classList.toggle('dark-theme');
+                localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+                this.showToast("Theme toggled");
+            }
+
+            showToast(message, duration = 3000) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = message;
+                this.toastContainer.appendChild(toast);
+                setTimeout(() => toast.style.opacity = '1', 10);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+
+            showInputToast(message, callback) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = `
+                    ${message}
+                    <input type="text" id="toast-input">
+                    <button onclick="notesApp.closeToast(this.parentNode)">Cancel</button>
+                `;
+                this.toastContainer.appendChild(toast);
+                setTimeout(() => toast.style.opacity = '1', 10);
+
+                const input = toast.querySelector('#toast-input');
+                input.focus();
+                input.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') {
+                        const value = input.value.trim();
+                        if (value) {
+                            callback(value);
+                            this.closeToast(toast);
+                        }
+                    }
+                });
+            }
+
+            closeToast(toast) {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }
+
+            handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                signInWithEmailAndPassword(auth, email, password)
+                    .then((userCredential) => {
+                        this.showToast("Logged in successfully");
+                    })
+                    .catch((error) => {
+                        this.authError.textContent = error.message;
+                    });
+            }
+
+            handleSignup(e) {
+                e.preventDefault();
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                createUserWithEmailAndPassword(auth, email, password)
+                    .then((userCredential) => {
+                        this.showToast("Signed up successfully");
+                    })
+                    .catch((error) => {
+                        this.authError.textContent = error.message;
+                    });
+            }
+
+            handleLogout() {
+                signOut(auth).then(() => {
+                    this.showToast("Logged out successfully");
+                }).catch((error) => {
+                    this.showToast("Error logging out: " + error.message);
+                });
+            }
+
+            handleGoogleSignIn() {
+                const provider = new GoogleAuthProvider();
+                signInWithPopup(auth, provider)
+                    .then((result) => {
+                        this.showToast("Logged in with Google successfully");
+                    }).catch((error) => {
+                        this.authError.textContent = error.message;
+                    });
+            }
+
+            syncToFirestore(data, collectionName = 'notes') {
+                if (!this.currentUser) return;
+
+                const docRef = doc(db, `users/${this.currentUser.uid}/${collectionName}/${data.id}`);
+                setDoc(docRef, data, { merge: true })
+                    .then(() => {
+                        console.log(`${collectionName} synced to Firestore`);
+                    })
+                    .catch((error) => {
+                        console.error(`Error syncing ${collectionName} to Firestore:`, error);
+                        this.syncQueue.push({ data, collectionName });
+                    });
+            }
+
+            deleteFromFirestore(collectionName, id) {
+                if (!this.currentUser) return;
+
+                const docRef = doc(db, `users/${this.currentUser.uid}/${collectionName}/${id}`);
+                deleteDoc(docRef)
+                    .then(() => {
+                        console.log(`${collectionName} deleted from Firestore`);
+                    })
+                    .catch((error) => {
+                        console.error(`Error deleting ${collectionName} from Firestore:`, error);
+                    });
+            }
+
+            processSyncQueue() {
+                if (this.isSyncing || this.syncQueue.length === 0) return;
+
+                this.isSyncing = true;
+                const { data, collectionName } = this.syncQueue.shift();
+                this.syncToFirestore(data, collectionName)
+                    .then(() => {
+                        this.isSyncing = false;
+                        this.processSyncQueue();
+                    })
+                    .catch(() => {
+                        this.isSyncing = false;
+                        this.syncQueue.push({ data, collectionName });
+                    });
+            }
+        }
+
+        // Initialize the application
+        const notesApp = new NotesApp();
     </script>
 </body>
 </html>
