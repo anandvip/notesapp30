@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Notes App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/default.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        #sidebar {
+            width: 250px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            overflow-y: auto;
+            transition: width 0.3s;
+        }
+        #sidebar.collapsed {
+            width: 0;
+            padding: 0;
+        }
+        #main-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #toggle-sidebar {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .note-card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .note-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .note-content {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .note-meta {
+            font-size: 12px;
+            color: #777;
+        }
+        .project-item {
+            cursor: pointer;
+            padding: 5px 0;
+        }
+        .project-item:hover {
+            background-color: #e0e0e0;
+        }
+        button {
+            display: inline-block;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #000;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        form input, form textarea {
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        form button {
+            align-self: flex-start;
+        }
+        #note-content {
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-sidebar">☰</button>
+    <div id="sidebar">
+        <h2>Projects</h2>
+        <div id="projects-list"></div>
+        <button id="add-project">Add Project</button>
+    </div>
+    <div id="main-content">
+        <h1>Firebase Notes App</h1>
+        <div id="user-status"></div>
+        <button id="login-btn">Log In</button>
+        <button id="google-signin-btn">Sign in with Google</button>
+        <button id="email-link-btn">Sign in with Email Link</button>
+        <button id="logout-btn" style="display: none;">Log Out</button>
+        <div id="notes-list"></div>
+        <button id="add-note">Add Note</button>
+    </div>
+
+    <div id="note-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add/Edit Note</h2>
+            <form id="note-form">
+                <input type="text" id="note-title" placeholder="Note Title" required>
+                <textarea id="note-content" placeholder="Note Content (Use ```-``` for code blocks)" required></textarea>
+                <button type="submit">Save Note</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="project-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add Project</h2>
+            <form id="project-form">
+                <input type="text" id="project-name" placeholder="Project Name" required>
+                <button type="submit">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Log In</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit">Log In</button>
+            </form>
+            <p>Don't have an account? <a href="#" id="signup-link">Sign up</a></p>
+        </div>
+    </div>
+
+    <div id="email-link-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Sign in with Email Link</h2>
+            <form id="email-link-form">
+                <input type="email" id="email-link-email" placeholder="Email" required>
+                <button type="submit">Send Sign-In Link</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD84fEmaDJC0m3ouTL1Di-v564bUE3RGkM",
+            authDomain: "notesapp30.firebaseapp.com",
+            projectId: "notesapp30",
+            storageBucket: "notesapp30.appspot.com",
+            messagingSenderId: "414284620791",
+            appId: "1:414284620791:web:7a1f957af7e2a45421c4f2"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let currentProject = null;
+        let currentNote = null;
+
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+        const projectsList = document.getElementById('projects-list');
+        const notesList = document.getElementById('notes-list');
+        const addNoteBtn = document.getElementById('add-note');
+        const addProjectBtn = document.getElementById('add-project');
+        const noteModal = document.getElementById('note-modal');
+        const projectModal = document.getElementById('project-modal');
+        const loginModal = document.getElementById('login-modal');
+        const emailLinkModal = document.getElementById('email-link-modal');
+        const noteForm = document.getElementById('note-form');
+        const projectForm = document.getElementById('project-form');
+        const loginForm = document.getElementById('login-form');
+        const emailLinkForm = document.getElementById('email-link-form');
+        const closeBtns = document.getElementsByClassName('close');
+        const userStatus = document.getElementById('user-status');
+        const loginBtn = document.getElementById('login-btn');
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const emailLinkBtn = document.getElementById('email-link-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const signupLink = document.getElementById('signup-link');
+
+        // Event Listeners
+        toggleSidebarBtn.addEventListener('click', toggleSidebar);
+        addNoteBtn.addEventListener('click', () => {
+            currentNote = null;
+            openModal(noteModal);
+        });
+        addProjectBtn.addEventListener('click', () => openModal(projectModal));
+        loginBtn.addEventListener('click', () => openModal(loginModal));
+        googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+        emailLinkBtn.addEventListener('click', () => openModal(emailLinkModal));
+        logoutBtn.addEventListener('click', handleLogout);
+        noteForm.addEventListener('submit', handleNoteSubmit);
+        projectForm.addEventListener('submit', handleProjectSubmit);
+        loginForm.addEventListener('submit', handleLogin);
+        emailLinkForm.addEventListener('submit', handleEmailLinkSignIn);
+        signupLink.addEventListener('click', handleSignup);
+
+        Array.from(closeBtns).forEach(btn => {
+            btn.addEventListener('click', () => closeModal(btn.parentElement.parentElement));
+        });
+
+        // Check for email link sign-in
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('Please provide your email for confirmation');
+            }
+            completeEmailLinkSignIn(email);
+        }
+
+        // Auth state observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                let userName = user.displayName || 'User';
+                userStatus.innerHTML = `Logged in as: <br>${userName}<br>${user.email}`;
+                loginBtn.style.display = 'none';
+                googleSignInBtn.style.display = 'none';
+                emailLinkBtn.style.display = 'none';
+                logoutBtn.style.display = 'inline-block';
+                addNoteBtn.style.display = 'inline-block';
+                addProjectBtn.style.display = 'inline-block';
+                loadProjects();
+            } else {
+                currentUser = null;
+                userStatus.textContent = 'Not logged in';
+                loginBtn.style.display = 'inline-block';
+                googleSignInBtn.style.display = 'inline-block';
+                emailLinkBtn.style.display = 'inline-block';
+                logoutBtn.style.display = 'none';
+                addNoteBtn.style.display = 'none';
+                addProjectBtn.style.display = 'none';
+                projectsList.innerHTML = '';
+                notesList.innerHTML = '';
+            }
+        });
+
+        // Functions
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+        }
+
+        function openModal(modal) {
+            modal.style.display = 'block';
+        }
+
+        function closeModal(modal) {
+            modal.style.display = 'none';
+        }
+
+        async function handleNoteSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('note-title').value;
+            const content = document.getElementById('note-content').value;
+            const now = new Date().toISOString();
+
+            try {
+                if (currentNote) {
+                    // Update existing note
+                    await updateDoc(doc(db, 'notes', currentNote), {
+                        title,
+                        content,
+                        updatedAt: now
+                    });
+                } else {
+                    // Add new note
+                    await addDoc(collection(db, 'notes'), {
+                        title,
+                        content,
+                        createdAt: now,
+                        updatedAt: now,
+                        userId: currentUser.uid,
+                        projectId: currentProject
+                    });
+                }
+                closeModal(noteModal);
+                noteForm.reset();
+                loadNotes();
+            } catch (error) {
+                console.error("Error saving note: ", error);
+                alert('Failed to save note. Please try again.');
+            }
+        }
+
+        async function handleProjectSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('project-name').value;
+
+            try {
+                await addDoc(collection(db, 'projects'), {
+                    name,
+                    userId: currentUser.uid
+                });
+                closeModal(projectModal);
+                projectForm.reset();
+                loadProjects();
+            } catch (error) {
+                console.error("Error adding project: ", error);
+                alert('Failed to add project. Please try again.');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (!userCredential.user.displayName) {
+                    const displayName = prompt("Please enter your name:");
+                    if (displayName) {
+                        await updateProfile(userCredential.user, { displayName: displayName });
+                    }
+                }
+                closeModal(loginModal);
+                loginForm.reset();
+            } catch (error) {
+                console.error("Error logging in: ", error);
+                alert('Failed to log in. Please check your credentials and try again.');
+            }
+        }
+
+        async function handleGoogleSignIn() {
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error("Error signing in with Google: ", error);
+                alert('Failed to sign in with Google. Please try again.');
+            }
+        }
+
+       async function handleEmailLinkSignIn(e) {
+        e.preventDefault();
+        const email = document.getElementById('email-link-email').value;
+
+        const actionCodeSettings = {
+            url: window.location.href,
+            handleCodeInApp: true
+        };
+
+        try {
+            await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+            window.localStorage.setItem('emailForSignIn', email);
+            alert('Check your email for the login link!');
+            closeModal(emailLinkModal);
+            emailLinkForm.reset();
+        } catch (error) {
+            console.error("Error sending sign-in link to email: ", error);
+            alert('Failed to send sign-in link. Please try again.');
+        }
+    }
+
+    async function completeEmailLinkSignIn(email) {
+        try {
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            if (!result.user.displayName) {
+                const displayName = prompt("Please enter your name:");
+                if (displayName) {
+                    await updateProfile(result.user, { displayName: displayName });
+                }
+            }
+            window.localStorage.removeItem('emailForSignIn');
+        } catch (error) {
+            console.error("Error signing in with email link: ", error);
+            alert('Failed to sign in with email link. Please try again.');
+        }
+    }
+
+    async function handleSignup(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const displayName = prompt("Please enter your name:");
+            if (displayName) {
+                await updateProfile(userCredential.user, { displayName: displayName });
+            }
+            closeModal(loginModal);
+            loginForm.reset();
+        } catch (error) {
+            console.error("Error signing up: ", error);
+            alert('Failed to sign up. Please try again.');
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error("Error logging out: ", error);
+            alert('Failed to log out. Please try again.');
+        }
+    }
+
+    async function loadProjects() {
+        try {
+            const q = query(collection(db, 'projects'), where("userId", "==", currentUser.uid));
+            const querySnapshot = await getDocs(q);
+            projectsList.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const project = doc.data();
+                const projectElement = document.createElement('div');
+                projectElement.className = 'project-item';
+                projectElement.textContent = project.name;
+                projectElement.addEventListener('click', () => {
+                    currentProject = doc.id;
+                    loadNotes();
+                });
+                projectsList.appendChild(projectElement);
+            });
+        } catch (error) {
+            console.error("Error loading projects: ", error);
+            alert('Failed to load projects. Please try again.');
+        }
+    }
+
+    async function loadNotes() {
+        if (!currentProject) return;
+
+        try {
+            const q = query(
+                collection(db, 'notes'),
+                where("userId", "==", currentUser.uid),
+                where("projectId", "==", currentProject),
+                orderBy("createdAt", "desc")
+            );
+            const querySnapshot = await getDocs(q);
+            notesList.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const note = doc.data();
+                const noteElement = document.createElement('div');
+                noteElement.className = 'note-card';
+                noteElement.innerHTML = `
+                    <div class="note-title">${note.title}</div>
+                    <div class="note-content">${formatContent(note.content)}</div>
+                    <div class="note-meta">
+                        Created: ${new Date(note.createdAt).toLocaleString()}<br>
+                        Updated: ${new Date(note.updatedAt).toLocaleString()}
+                    </div>
+                    <button onclick="editNote('${doc.id}')">Edit</button>
+                    <button onclick="deleteNote('${doc.id}')">Delete</button>
+                `;
+                notesList.appendChild(noteElement);
+            });
+        } catch (error) {
+            console.error("Error loading notes: ", error);
+            alert('Failed to load notes. Please try again.');
+        }
+    }
+
+    function formatContent(content) {
+        // Replace ```-``` with ```
+        content = content.replace(/```-/g, '```');
+        // Use marked to parse Markdown and highlight.js for syntax highlighting
+        const rawMarkup = marked(content);
+        const highlightedMarkup = rawMarkup.replace(/<pre><code class="(.*?)">([\s\S]*?)<\/code><\/pre>/g, function(match, language, code) {
+            if (language && hljs.getLanguage(language)) {
+                return '<pre><code class="' + language + '">' + hljs.highlight(code, { language: language, ignoreIllegals: true }).value + '</code></pre>';
+            }
+            return '<pre><code>' + hljs.highlightAuto(code).value + '</code></pre>';
+        });
+        return highlightedMarkup;
+    }
+
+    window.editNote = async function(noteId) {
+        try {
+            const noteDoc = await getDoc(doc(db, 'notes', noteId));
+            if (noteDoc.exists()) {
+                const note = noteDoc.data();
+                document.getElementById('note-title').value = note.title;
+                document.getElementById('note-content').value = note.content;
+                currentNote = noteId;
+                openModal(noteModal);
+            }
+        } catch (error) {
+            console.error("Error loading note for editing: ", error);
+            alert('Failed to load note for editing. Please try again.');
+        }
+    }
+
+    window.deleteNote = async function(noteId) {
+        if (confirm('Are you sure you want to delete this note?')) {
+            try {
+                await deleteDoc(doc(db, 'notes', noteId));
+                loadNotes();
+            } catch (error) {
+                console.error("Error deleting note: ", error);
+                alert('Failed to delete note. Please try again.');
+            }
+        }
+    }
+
+    // Initial load
+    if (auth.currentUser) {
+        loadProjects();
+    }
+
+    // Initialize highlight.js
+    hljs.highlightAll();
+</script>
+  </body>
+  </html>
